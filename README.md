@@ -67,7 +67,66 @@ curl -X POST http://localhost:3000/api/bookings \
   }'
 ```
 
-Repeat with destinations like Paris (CDG), Los Angeles (LAX), and London (LHR). Refresh the page for your bookings to appear under “YOUR TRIPS”.
+Or run these three examples (adjust `tripId` and dates as needed). Refresh the page for your bookings to appear under “YOUR TRIPS”.
+
+```bash
+# Paris (CDG)
+curl -X POST http://localhost:3000/api/bookings \
+  -H 'content-type: application/json' \
+  -d '{
+    "tripId": 2,
+    "carrier": "Air France",
+    "flightNumber": "AF011",
+    "originCity": "New York",
+    "originCode": "JFK",
+    "originAirportName": "JFK Intl",
+    "destinationCity": "Paris",
+    "destinationCode": "CDG",
+    "destinationAirportName": "Charles de Gaulle",
+    "departAt": "2025-11-05T18:30:00.000Z",
+    "arriveAt": "2025-11-06T07:55:00.000Z",
+    "price": 780,
+    "currency": "USD"
+  }'
+
+# Los Angeles (LAX)
+curl -X POST http://localhost:3000/api/bookings \
+  -H 'content-type: application/json' \
+  -d '{
+    "tripId": 3,
+    "carrier": "Delta Air Lines",
+    "flightNumber": "DL123",
+    "originCity": "Chicago",
+    "originCode": "ORD",
+    "originAirportName": "O'Hare Intl",
+    "destinationCity": "Los Angeles",
+    "destinationCode": "LAX",
+    "destinationAirportName": "Los Angeles Intl",
+    "departAt": "2025-10-20T15:15:00.000Z",
+    "arriveAt": "2025-10-20T17:55:00.000Z",
+    "price": 320,
+    "currency": "USD"
+  }'
+
+# London (LHR)
+curl -X POST http://localhost:3000/api/bookings \
+  -H 'content-type: application/json' \
+  -d '{
+    "tripId": 4,
+    "carrier": "British Airways",
+    "flightNumber": "BA212",
+    "originCity": "Boston",
+    "originCode": "BOS",
+    "originAirportName": "Logan Intl",
+    "destinationCity": "London",
+    "destinationCode": "LHR",
+    "destinationAirportName": "Heathrow",
+    "departAt": "2025-12-10T22:30:00.000Z",
+    "arriveAt": "2025-12-11T06:55:00.000Z",
+    "price": 650,
+    "currency": "USD"
+  }'
+```
 
 ### 6) Flow of a normal booking
 1. On the home page. press Command (⌘) + K to open the planner.
@@ -103,3 +162,12 @@ The agent extracts travel intent and creates a “potential trip.” The app det
 - Streaming outputs: `/api/component?stream=1` and `/api/emails?stream=true` send SSE chunks consumed by the UI for real-time updates.
 - Chat Completions integration: endpoints use `@ai-sdk/openai` with the Vercel AI SDK (`ai`) to call models and stream.
 - Dynamic UI generation: the model decides what’s missing in the DB and streams minimal UI components (prompts, CTA, flights) to collect or present just-in-time info.
+
+### 9) Future plans
+
+- Broader integrations beyond email: calendar, WhatsApp, and other providers.
+- Coordinate with friends and family to plan and book group trips.
+- Integrate Amadeus APIs to fetch real flight availability and fares (no mocks).
+- Build a richer understanding of a user's personal situation. For example, families with kids: map parents' and kids' locations, read school calendars, and suggest trips accordingly.
+- For deep-research tasks, adopt the Responses API instead of plain Chat Completions.
+- Add voice and real-time modalities for hands-free, conversational trip planning.
