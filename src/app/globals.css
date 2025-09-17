@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
+  --background: #d1d5db;
   --foreground: #171717;
 }
 
@@ -14,8 +14,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #d1d5db;
+    --foreground: #171717;
   }
 }
 
@@ -24,3 +24,58 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@keyframes slide-pan-x {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-slide-pan-x {
+  animation: slide-pan-x 9.8s linear infinite alternate;
+}
+
+@keyframes slide-pan-seq {
+  /* 0s → 2s: hold gray (track shifted so gray half is visible) */
+  0%, 45.455% {
+    transform: translateX(-50%);
+  }
+  /* 2s → 2.2s: slide image in */
+  50% {
+    transform: translateX(0);
+  }
+  /* 2.2s → 4.2s: hold image */
+  95.455% {
+    transform: translateX(0);
+  }
+  /* 4.2s → 4.4s: slide back to gray */
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-slide-pan-seq {
+  /* Total cycle 3.08s (30% faster than 4.4s) */
+  animation: slide-pan-seq 3.08s linear infinite both;
+}
+
+/* Right-direction variant (gray is right half; image slides in from right) */
+@keyframes slide-pan-seq-right {
+  0%, 46.875% { transform: translateX(-50%); }
+  50% { transform: translateX(0); }
+  96.875% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.animate-slide-pan-seq-right { animation: slide-pan-seq-right 22.4s linear infinite both; }
+
+/* Left-direction variant (gray is left half; image slides in from left) */
+@keyframes slide-pan-seq-left {
+  0%, 46.875% { transform: translateX(0); }
+  50% { transform: translateX(-50%); }
+  96.875% { transform: translateX(-50%); }
+  100% { transform: translateX(0); }
+}
+.animate-slide-pan-seq-left { animation: slide-pan-seq-left 22.4s linear infinite both; }

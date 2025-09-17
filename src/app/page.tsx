@@ -1,103 +1,102 @@
-import Image from "next/image";
+import TravelWidget from "../components/TravelWidget";
+import SearchBar from "../components/SearchBar";
+import ProposedTrips from "../components/ProposedTrips";
+import ProposedTripsModal from "../components/ProposedTripsModal";
+import { db } from "@/db/client";
+import { trips } from "@/db/schema";
+import { desc } from "drizzle-orm";
 
-export default function Home() {
+export default async function Home() {
+  const proposedTrips = await db
+    .select({ id: trips.id, name: trips.name, destination: trips.destination, budget: trips.budget })
+    .from(trips)
+    .orderBy(desc(trips.createdAt))
+    .limit(3);
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="font-sans min-h-screen relative overflow-hidden">
+      <div className="pointer-events-none fixed inset-0 -z-10 bg-[#DBE1ED]" />
+      <div className="w-full mx-auto max-w-6xl px-4 sm:px-6 mt-4 sm:mt-6 mb-6 sm:mb-8">
+        <h1 className="px-1 mb-3 text-xs tracking-[0.18em] font-semibold bg-gradient-to-r from-sky-400 via-indigo-400 to-fuchsia-400 bg-clip-text text-transparent">
+          FIND YOUR TRIP
+        </h1>
+        <SearchBar />
+      </div>
+      <main className="w-full mx-auto max-w-6xl px-4 sm:px-6">
+        {/* Proposed Trips section is hidden; shown via modal (Cmd+K or button) */}
+        {/* <section className="mb-6 sm:mb-8">
+          <h2 className="px-1 mb-3 text-xs tracking-[0.18em] font-semibold bg-gradient-to-r from-sky-400 via-indigo-400 to-fuchsia-400 bg-clip-text text-transparent">
+            PROPOSED TRIPS
+          </h2>
+          <ProposedTrips trips={proposedTrips} />
+        </section> */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-7">
+          <div className="flex flex-col gap-4 sm:gap-6">
+            <div className="aspect-square">
+              <div className="w-full max-w-[420px]">
+                <TravelWidget
+                  className="h-full"
+                  readOnly
+                  transparent
+                  weatherTempF={64}
+                  weatherSummary="Clear Skies"
+                  humidityPct={55}
+                  windMph={6}
+                  trip={{
+                    destination: "Lisbon, Portugal",
+                    startDate: "2026-05-10",
+                    endDate: "2026-05-16",
+                    guests: 2,
+                  }}
+                />
+              </div>
+            </div>
+            <div className="aspect-square">
+              <div className="w-full max-w-[420px]">
+                <TravelWidget
+                  readOnly
+                  transparent
+                  weatherTempF={72}
+                  weatherSummary="Sunny"
+                  humidityPct={40}
+                  windMph={8}
+                  trip={{
+                    destination: "Kyoto, Japan",
+                    startDate: "2026-10-02",
+                    endDate: "2026-10-09",
+                    guests: 2,
+                  }}
+                />
+              </div>
+            </div>
+          </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+          <div className="lg:row-span-2">
+            <div className="w-full h-full max-w-[420px] lg:h-[540px]">
+              <h2 className="px-1 mb-3 text-xs tracking-[0.18em] font-semibold bg-gradient-to-r from-sky-400 via-indigo-400 to-fuchsia-400 bg-clip-text text-transparent">
+                NEXT ADVENTURE
+              </h2>
+              <TravelWidget
+                className="h-full"
+                readOnly
+                transparent
+                weatherTempF={78}
+                weatherSummary="Partly Sunny"
+                humidityPct={65}
+                windMph={10}
+                trip={{
+                  destination: "Miami, Florida",
+                  startDate: "2026-04-20",
+                  endDate: "2026-04-26",
+                  guests: 2,
+                }}
+              />
+            </div>
+          </div>
         </div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      {/* Modal overlay for Proposed Trips */}
+      <ProposedTripsModal trips={proposedTrips} />
+      <footer />
     </div>
   );
 }
