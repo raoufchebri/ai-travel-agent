@@ -9,6 +9,7 @@ type Trip = {
   name: string;
   destination: string;
   budget: number | null;
+  isBooked?: boolean;
 };
 
 type ButtonSpec = {
@@ -40,6 +41,12 @@ type FlightSpec = {
   durationMinutes: number;
   price: number;
   currency: string;
+  originCity?: string;
+  originCode?: string;
+  originAirportName?: string;
+  destinationCity?: string;
+  destinationCode?: string;
+  destinationAirportName?: string;
 };
 
 type ComponentSpec = ButtonSpec | PromptSpec | FlightSpec;
@@ -52,6 +59,8 @@ export default function ProposedTripsModal({ trips }: Props) {
   const [open, setOpen] = useState(true);
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [closing, setClosing] = useState(false);
   const [messages, setMessages] = useState<Array<{ role: "user" | "assistant" | "system"; content: string }>>([]);
   const [activeTrip, setActiveTrip] = useState<Trip | null>(null);
   const [components, setComponents] = useState<ComponentSpec[]>([]);
@@ -149,13 +158,42 @@ export default function ProposedTripsModal({ trips }: Props) {
     setIntroReady(false);
   }, [open]);
 
+  const availableTrips = Array.isArray(trips) ? trips.filter((t) => !t.isBooked) : [];
+  if (!availableTrips || availableTrips.length === 0) return null;
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-md" onClick={() => setOpen(false)} />
-      <div className="relative z-10 flex items-center justify-center min-h-full p-4 animate-[fadeIn_200ms_ease-out_forwards] opacity-0">
+      <div
+        className={
+          "absolute inset-0 bg-black/40 backdrop-blur-md " +
+          (closing ? "animate-[fadeOut_300ms_ease-in_forwards]" : "")
+        }
+        onClick={() => {
+          setClosing(true);
+          setTimeout(() => setOpen(false), 300);
+        }}
+      />
+      <div
+        className={
+          "relative z-10 flex items-center justify-center min-h-full p-4 " +
+          (closing
+            ? "animate-[fadeOut_300ms_ease-in_forwards]"
+            : "animate-[fadeIn_200ms_ease-out_forwards] opacity-0")
+        }
+      >
         <div className="w-full max-w-4xl">
+          {notice && (
+            <div className="mb-3 opacity-0 animate-[itemIn_240ms_ease-out_forwards]">
+              <div className="rounded-xl border border-emerald-400/40 bg-emerald-500/10 px-4 py-3 text-white flex items-center gap-3 backdrop-blur-xl">
+                <div className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-400/20 text-emerald-300">✓</div>
+                <div>
+                  <div className="font-semibold">Trip booked</div>
+                  <div className="text-white/80 text-sm">{notice}</div>
+                </div>
+              </div>
+            </div>
+          )}
           {/* Streaming AI notice above trips, styled with page.tsx gradient colors */}
           {phase === "intro" ? (
           <div className="mb-4">
@@ -169,7 +207,7 @@ export default function ProposedTripsModal({ trips }: Props) {
           ) : (
             <div className="opacity-0 animate-[itemIn_320ms_ease-out_forwards]">
               <ProposedTrips
-                trips={trips}
+                trips={availableTrips}
                 selectedId={activeTrip?.id}
                 onTripClick={async (trip) => {
                   setResponse(null);
@@ -219,38 +257,71 @@ export default function ProposedTripsModal({ trips }: Props) {
                   ))}
                 </div>
                 {components.filter((c) => c.type === "flight").length > 0 && (
-                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
                     {(components.filter((c) => c.type === "flight") as FlightSpec[]).map((f, i) => (
                       <div
                         key={f.id}
-                        className="rounded-lg border border-white/20 bg-white/5 p-4 opacity-0 animate-[itemIn_320ms_ease-out_forwards]"
+                        className="rounded-xl border border-white/20 bg-white/5 p-5 opacity-0 animate-[itemIn_320ms_ease-out_forwards]"
                         style={{ animationDelay: `${i * 80}ms` }}
                       >
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-2">
-                            <img src={f.carrierLogo} alt={f.carrier} className="h-6 w-6 object-contain" />
-                            <div className="font-medium text-white">{f.carrier}</div>
-                          </div>
-                          <div className="text-white/70 text-sm">{f.flightNumber}</div>
+                        <div className="mb-4 flex items-center justify-center">
+                          <img src={f.carrierLogo} alt={f.carrier} className="w-2/3 max-h-28 sm:max-h-32 object-contain" />
                         </div>
-                        <div className="mb-3">
-                          <div className="text-white text-lg">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="font-semibold text-white text-lg">{f.carrier}</div>
+                          <div className="text-white/80 text-base">{f.flightNumber}</div>
+                        </div>
+                        <div className="mb-4">
+                          <div className="text-white text-xl">
                             {f.origin} → {f.destination}
                           </div>
-                          <div className="text-white/80 text-sm">
+                          <div className="text-white/80 text-base">
                             {new Date(f.departAt).toLocaleString()} - {new Date(f.arriveAt).toLocaleString()}
                           </div>
-                          <div className="text-white/70 text-xs">Duration: {Math.round(f.durationMinutes / 60)}h {f.durationMinutes % 60}m</div>
+                          <div className="text-white/70 text-sm">Duration: {Math.round(f.durationMinutes / 60)}h {f.durationMinutes % 60}m</div>
                         </div>
                         <div className="flex items-center justify-between">
-                          <div className="text-white text-lg font-semibold">
+                          <div className="text-white text-2xl font-semibold">
                             {f.currency} {f.price}
                           </div>
                           <button
                             type="button"
-                            className="px-3 py-1.5 rounded-md bg-white/20 hover:bg-white/30 border border-white/30 text-white text-sm"
+                            className="px-4 py-2 rounded-md bg-white/20 hover:bg-white/30 border border-white/30 text-white text-base"
                             onClick={() => {
-                              setResponse(`Selected ${f.carrier} ${f.flightNumber}`);
+                              const body = {
+                                tripId: activeTrip?.id ?? availableTrips[0]?.id,
+                                carrier: f.carrier,
+                                flightNumber: f.flightNumber,
+                                originCity: f.originCity || (f.origin.split("(")[1]?.replace(")","")) || undefined,
+                                originCode: f.originCode || (f.origin.split(" ")[0]) || undefined,
+                                originAirportName: f.originAirportName || undefined,
+                                destinationCity: f.destinationCity || (f.destination.split("(")[1]?.replace(")","")) || undefined,
+                                destinationCode: f.destinationCode || (f.destination.split(" ")[0]) || undefined,
+                                destinationAirportName: f.destinationAirportName || undefined,
+                                departAt: f.departAt,
+                                arriveAt: f.arriveAt,
+                                price: f.price,
+                                currency: f.currency,
+                              };
+                              fetch("/api/bookings", {
+                                method: "POST",
+                                headers: { "content-type": "application/json" },
+                                body: JSON.stringify(body),
+                              })
+                                .then(async (r) => {
+                                  if (!r.ok) throw new Error(await r.text());
+                                  return r.json();
+                                })
+                                .then(() => {
+                                  const msg = `${f.carrier} ${f.flightNumber} — ${f.origin} → ${f.destination}`;
+                                  setResponse(`Booked ${msg}`);
+                                  setNotice(msg);
+                                  setTimeout(() => {
+                                    setClosing(true);
+                                    setTimeout(() => setOpen(false), 300);
+                                  }, 3000);
+                                })
+                                .catch(() => setResponse("Failed to book flight."));
                             }}
                             aria-label={`Select flight ${f.flightNumber}`}
                           >
@@ -382,7 +453,7 @@ export default function ProposedTripsModal({ trips }: Props) {
                       onSubmit={async (e) => {
                         e.preventDefault();
                         if (loading) return;
-                        const lastTrip = activeTrip ?? trips[0];
+                        const lastTrip = activeTrip ?? availableTrips[0];
                         if (!lastTrip) return;
                         const pending = (components.filter((c) => c.type === "prompt") as PromptSpec[]);
                         const entries = pending
@@ -441,6 +512,7 @@ export default function ProposedTripsModal({ trips }: Props) {
       </div>
       <style jsx>{`
         @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(6px); } }
         @keyframes itemIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
         .ai-dot { display:inline-block; width:6px; height:6px; border-radius:9999px; background:rgba(255,255,255,0.9); opacity:0.2; animation: aiDots 900ms infinite ease-in-out; }
         .ai-dot-lg { width:10px; height:10px; }

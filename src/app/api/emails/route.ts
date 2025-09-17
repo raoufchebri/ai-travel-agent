@@ -1,6 +1,6 @@
 import { db } from "@/db/client";
-import { emails, trips } from "@/db/schema";
-import { and, count, desc, gt } from "drizzle-orm";
+import { emails, potentialTrips } from "@/db/schema";
+import { and, count, desc, gt, eq, like } from "drizzle-orm";
 import { streamText, generateText, Tool } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { NextResponse } from "next/server";
@@ -31,8 +31,8 @@ const createTripTool: Tool = {
 		const parsedStartDate = typeof startDate === "string" ? new Date(startDate) : undefined;
 		const parsedEndDate = typeof endDate === "string" ? new Date(endDate) : undefined;
 
-		const [trip] = await db
-			.insert(trips)
+    const [trip] = await db
+      .insert(potentialTrips)
 			.values({
 				name,
 				destination,
@@ -41,7 +41,7 @@ const createTripTool: Tool = {
 				startDate: parsedStartDate,
 				endDate: parsedEndDate,
 			})
-			.returning({ id: trips.id });
+      .returning({ id: potentialTrips.id });
 		return {
 			id: trip.id,
 			startDate: typeof startDate === "string" ? startDate : undefined,
@@ -71,6 +71,10 @@ export async function GET(request: Request) {
 
 		const whereClauses = [] as Array<ReturnType<typeof and>> | any[];
 
+		// Only consider potential trips that are unbooked and originated from emails
+		whereClauses.push(eq(potentialTrips.isBooked, false));
+		whereClauses.push(like(potentialTrips.source, "email:%"));
+
 		if (sinceParam) {
 			const sinceDate = new Date(sinceParam);
 			if (Number.isNaN(sinceDate.getTime())) {
@@ -79,7 +83,7 @@ export async function GET(request: Request) {
 					{ status: 400, headers: { "content-type": "application/json" } }
 				);
 			}
-			whereClauses.push(gt(trips.createdAt, sinceDate));
+      whereClauses.push(gt(potentialTrips.createdAt, sinceDate));
 		}
 
 		if (afterIdParam) {
@@ -90,7 +94,7 @@ export async function GET(request: Request) {
 					{ status: 400, headers: { "content-type": "application/json" } }
 				);
 			}
-			whereClauses.push(gt(trips.id, afterId));
+      whereClauses.push(gt(potentialTrips.id, afterId));
 		}
 
 		const compoundWhere =
@@ -100,7 +104,7 @@ export async function GET(request: Request) {
 					? whereClauses[0]
 					: and(...whereClauses);
 
-		let countQuery = db.select({ value: count() }).from(trips);
+    let countQuery = db.select({ value: count() }).from(potentialTrips);
 		if (compoundWhere) {
 			// @ts-expect-error drizzle types don't like undefined in where
 			countQuery = countQuery.where(compoundWhere);
@@ -112,11 +116,11 @@ export async function GET(request: Request) {
 		let summary: string | null = null;
 		if (total > 0) {
 			try {
-				const latest = await db
-					.select({ id: trips.id, destination: trips.destination, name: trips.name, budget: trips.budget })
-					.from(trips)
+        const latest = await db
+          .select({ id: potentialTrips.id, destination: potentialTrips.destination, name: potentialTrips.name, budget: potentialTrips.budget })
+          .from(potentialTrips)
 					.where(compoundWhere)
-					.orderBy(desc(trips.createdAt))
+          .orderBy(desc(potentialTrips.createdAt))
 					.limit(1);
 
 				const trip = latest[0];

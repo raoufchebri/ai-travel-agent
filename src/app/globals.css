@@ -79,3 +79,29 @@ body {
   100% { transform: translateX(0); }
 }
 .animate-slide-pan-seq-left { animation: slide-pan-seq-left 22.4s linear infinite both; }
+
+/* Text glow sweep: left → right over 300ms every 1s */
+@keyframes ai-glow-scan-move {
+  0% {
+    background-position: 0% 50%, -200% 50%;
+  }
+  30% {
+    background-position: 0% 50%, 200% 50%;
+  }
+  100% {
+    background-position: 0% 50%, 200% 50%;
+  }
+}
+
+.ai-glow-scan {
+  /* Base gradient text color */
+  background-image:
+    linear-gradient(90deg, #38bdf8, #818cf8, #e879f9),
+    linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.9) 50%, rgba(255,255,255,0) 100%);
+  background-size: 100% 100%, 200% 100%;
+  background-position: 0% 50%, -200% 50%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: ai-glow-scan-move 1s ease-in-out infinite;
+}

@@ -7,6 +7,27 @@ type SearchResult = {
   error?: string;
 };
 
+type FlightSpec = {
+  type: "flight";
+  id: string;
+  carrier: string;
+  carrierLogo: string;
+  flightNumber: string;
+  origin: string;
+  destination: string;
+  departAt: string;
+  arriveAt: string;
+  durationMinutes: number;
+  price: number;
+  currency: string;
+  originCity?: string;
+  originCode?: string;
+  originAirportName?: string;
+  destinationCity?: string;
+  destinationCode?: string;
+  destinationAirportName?: string;
+};
+
 export default function SearchBar() {
   const [destination, setDestination] = useState("");
   const [loading, setLoading] = useState(false);
@@ -97,7 +118,7 @@ export default function SearchBar() {
 
   return (
     <div className="w-full">
-      <div className="rounded-2xl border border-white/30 bg-white/10 backdrop-blur-xl text-white p-4 sm:p-5">
+      <div className="rounded-2xl border border-white/30 bg-white/5 backdrop-blur-xl text-white p-4 sm:p-5">
         <form
           className="grid grid-cols-1 gap-3 items-end"
           onSubmit={onSubmit}
@@ -117,7 +138,7 @@ export default function SearchBar() {
               onChange={(e) => setDestination(e.target.value)}
               placeholder="Where do you want to go?"
               enterKeyHint="search"
-              className="w-full h-14 sm:h-16 bg-white/10 border border-white/30 rounded-xl px-4 sm:px-5 py-3 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/40 text-lg sm:text-xl"
+              className="w-full h-14 sm:h-16 bg-white/5 border border-white/30 rounded-xl px-4 sm:px-5 py-3 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500 caret-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/40 text-2xl sm:text-3xl"
             />
           </div>
         </form>
@@ -134,7 +155,7 @@ export default function SearchBar() {
           <div className="absolute inset-0 bg-black/40 backdrop-blur-md opacity-0 animate-[fadeIn_180ms_ease-out_forwards]" onClick={() => setModalOpen(false)} />
           <div className="relative z-10 flex items-center justify-center min-h-full p-4 opacity-0 animate-[fadeIn_220ms_ease-out_forwards]">
             <div className="w-full max-w-4xl">
-              <div className="rounded-2xl border border-white/30 bg-white/10 backdrop-blur-xl text-white p-4 sm:p-5 opacity-0 animate-[itemIn_260ms_ease-out_forwards]">
+              <div className="rounded-2xl border border-white/30 bg-white/5 backdrop-blur-xl text-white p-4 sm:p-5 opacity-0 animate-[itemIn_260ms_ease-out_forwards]">
                 <div className="px-1 mb-3 text-xs tracking-[0.18em] font-semibold bg-gradient-to-r from-sky-400 via-indigo-400 to-fuchsia-400 bg-clip-text text-transparent">
                   FIND YOUR TRIP
                 </div>
@@ -148,7 +169,7 @@ export default function SearchBar() {
                       onChange={(e) => setDestination(e.target.value)}
                       placeholder="Where do you want to go?"
                       enterKeyHint="search"
-                      className="w-full h-14 sm:h-16 bg-white/10 border border-white/30 rounded-xl px-4 sm:px-5 py-3 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/40 text-lg sm:text-xl"
+                      className="w-full h-14 sm:h-16 bg-white/5 border border-white/30 rounded-xl px-4 sm:px-5 py-3 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500 caret-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/40 text-2xl sm:text-3xl"
                     />
                   </div>
                 </form>
@@ -338,6 +359,103 @@ export default function SearchBar() {
                         ))}
                       </div>
                     )}
+                  </div>
+                )}
+                {components.filter((c) => c.type === "flight").length > 0 && (
+                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
+                    {(components.filter((c) => c.type === "flight") as FlightSpec[]).map((f, i) => (
+                      <div
+                        key={f.id}
+                        className="rounded-2xl border border-white/20 bg-white/5 p-5 opacity-0 animate-[itemIn_320ms_ease-out_forwards]"
+                        style={{ animationDelay: `${i * 80}ms` }}
+                      >
+                        <div className="mb-4 flex items-center justify-center">
+                          <img src={f.carrierLogo} alt={f.carrier} className="w-2/3 max-h-28 sm:max-h-32 object-contain" />
+                        </div>
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="font-semibold text-white text-lg">{f.carrier}</div>
+                          <div className="text-white/80 text-base">{f.flightNumber}</div>
+                        </div>
+                        <div className="mb-4">
+                          <div className="text-white text-xl">
+                            {f.origin} → {f.destination}
+                          </div>
+                          <div className="text-white/80 text-base">
+                            {new Date(f.departAt).toLocaleString()} - {new Date(f.arriveAt).toLocaleString()}
+                          </div>
+                          <div className="text-white/70 text-sm">Duration: {Math.round(f.durationMinutes / 60)}h {f.durationMinutes % 60}m</div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="text-white text-2xl font-semibold">
+                            {f.currency} {f.price}
+                          </div>
+                          <button
+                            type="button"
+                            className="px-4 py-2 rounded-md bg-white/20 hover:bg-white/30 border border-white/30 text-white text-base disabled:opacity-50"
+                            onClick={async () => {
+                              if (!tripId) return;
+                              const parseLabel = (label: string) => {
+                                const raw = String(label || "").trim();
+                                // Case 1: CODE (City)
+                                let m = raw.match(/^([A-Za-z0-9]{3})\s*\(([^)]+)\)/);
+                                if (m) return { code: m[1].toUpperCase(), city: m[2].trim() };
+                                // Case 2: City (CODE)
+                                m = raw.match(/^(.+?)\s*\(([A-Za-z0-9]{3})\)/);
+                                if (m) return { code: m[2].toUpperCase(), city: m[1].trim() };
+                                // Case 3: Any standalone 3-letter token
+                                const anyCode = /\b([A-Za-z0-9]{3})\b/.exec(raw)?.[1];
+                                if (anyCode) return { code: anyCode.toUpperCase(), city: raw };
+                                // Fallback: synthesize a pseudo-code and use label as city
+                                const synth = raw.replace(/[^A-Za-z0-9]/g, "").slice(0, 3).toUpperCase() || "XXX";
+                                return { code: synth, city: raw || "Unknown" };
+                              };
+                              const o = parseLabel(f.origin);
+                              const d = parseLabel(f.destination);
+                              const body = {
+                                tripId,
+                                carrier: f.carrier,
+                                flightNumber: f.flightNumber,
+                                originCity: f.originCity || o.city,
+                                originCode: f.originCode || o.code,
+                                originAirportName: f.originAirportName || o.city,
+                                destinationCity: f.destinationCity || d.city,
+                                destinationCode: f.destinationCode || d.code,
+                                destinationAirportName: f.destinationAirportName || d.city,
+                                departAt: f.departAt,
+                                arriveAt: f.arriveAt,
+                                price: f.price,
+                                currency: f.currency,
+                              } as any;
+                              try {
+                                const r = await fetch("/api/bookings", {
+                                  method: "POST",
+                                  headers: { "content-type": "application/json" },
+                                  body: JSON.stringify(body),
+                                });
+                                if (!r.ok) {
+                                  let msg = "Failed to book flight.";
+                                  try {
+                                    const j = await r.json();
+                                    if (Array.isArray(j?.errors)) msg = `Failed: ${j.errors.join(", ")}`;
+                                  } catch {}
+                                  setResult({ text: msg, error: "booking" });
+                                  return;
+                                }
+                                const msg = `${f.carrier} ${f.flightNumber} — ${f.origin} → ${f.destination}`;
+                                setResult({ text: `Booked ${msg}` });
+                                setTimeout(() => setModalOpen(false), 3000);
+                              } catch (e: any) {
+                                setResult({ text: `Failed to book flight. ${String(e?.message || e)}`, error: "booking" });
+                              }
+                            }}
+                            aria-label={`Select flight ${f.flightNumber}`}
+                            disabled={!tripId}
+                          >
+                            Select
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
                 {result && (

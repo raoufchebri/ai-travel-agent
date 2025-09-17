@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Trip = {
   destination: string;
@@ -25,15 +25,27 @@ type TravelWidgetProps = {
   windMph?: number;
   className?: string;
   transparent?: boolean;
+  backgroundImageUrl?: string;
+  disablePopOut?: boolean;
 };
 
-export default function TravelWidget({ onSearch, readOnly, trip, weatherLabel, weatherTempF, weatherSummary, humidityPct, windMph, className, transparent }: TravelWidgetProps) {
+export default function TravelWidget({ onSearch, readOnly, trip, weatherLabel, weatherTempF, weatherSummary, humidityPct, windMph, className, transparent, backgroundImageUrl, disablePopOut }: TravelWidgetProps) {
   const [destination, setDestination] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [guests, setGuests] = useState(1);
-  const [animDelay] = useState(() => `${Math.floor(Math.random() * 10000)}ms`);
-  const [directionClass] = useState(() => (Math.random() < 0.5 ? "animate-slide-pan-seq-right" : "animate-slide-pan-seq-left"));
+  const [hoverTransform, setHoverTransform] = useState<string>("");
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setIsOpen(false);
+    }
+    if (isOpen) {
+      window.addEventListener("keydown", onKey);
+    }
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen]);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -78,12 +90,32 @@ export default function TravelWidget({ onSearch, readOnly, trip, weatherLabel, w
       <div className={`w-full max-w-3xl ${className ?? ""}`}>
         <div className="relative h-full">
           <div className="relative h-full rounded-[26px] p-[2px] bg-transparent shadow-[0_25px_80px_-30px_rgba(0,0,0,0.2)]">
-            <div className="relative h-full rounded-[24px] border-4 border-white/95 backdrop-blur-2xl text-white overflow-hidden">
-              <div className="absolute inset-0 overflow-hidden">
-                <div className={`w-[200%] h-full flex ${directionClass}`} style={{ animationDelay: animDelay }}>
-                  <div className="w-1/2 h-full bg-[url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1800&q=80')] bg-cover bg-center" />
-                  <div className="w-1/2 h-full" style={{ backgroundColor: "#DBE1ED" }} />
-                </div>
+            <div
+              className="relative h-full rounded-[24px] border-4 border-white/95 backdrop-blur-2xl text-white overflow-hidden group"
+              onMouseEnter={() => setHoverTransform("perspective(1000px) scale(1.02)")}
+              onMouseLeave={() => setHoverTransform("")}
+              onMouseMove={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const px = (x / rect.width) * 2 - 1; // -1 (left) to 1 (right)
+                const py = (y / rect.height) * 2 - 1; // -1 (top) to 1 (bottom)
+                const maxTiltDeg = 6;
+                const rotateY = px * maxTiltDeg;
+                const rotateX = -py * maxTiltDeg;
+                setHoverTransform(`perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.03)`);
+              }}
+              onClick={() => { if (!disablePopOut) setIsOpen(true); }}
+              style={{ transform: hoverTransform || undefined, transition: "transform 150ms ease", transformStyle: "preserve-3d", cursor: disablePopOut ? undefined : "pointer" }}
+            >
+              <div className="absolute inset-0">
+                <div className="absolute inset-0" style={{ backgroundColor: "#DBE1ED" }} />
+                <div
+                  className="absolute inset-0 bg-cover bg-center opacity-0 transition-opacity duration-500 group-hover:opacity-80"
+                  style={{
+                    backgroundImage: `url('${backgroundImageUrl ?? "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1800&q=80"}')`,
+                  }}
+                />
               </div>
               <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-white/15 to-white/0" style={transparent ? { opacity: 0.1 } : undefined} />
               <div className="relative z-10 px-6 py-6 sm:px-8 sm:py-7 h-full">
@@ -198,6 +230,32 @@ export default function TravelWidget({ onSearch, readOnly, trip, weatherLabel, w
           </div>
         </div>
       </div>
+        {isOpen && !disablePopOut && (
+          <div className="fixed inset-0 z-[999] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsOpen(false)} />
+            <div className="relative z-10 w-full max-w-2xl" style={{ transform: "translateZ(0)" }}>
+              <button
+                onClick={() => setIsOpen(false)}
+                aria-label="Close"
+                className="absolute -top-3 -right-3 h-9 w-9 rounded-full bg-white text-black shadow-md flex items-center justify-center hover:opacity-90"
+              >
+                ×
+              </button>
+              <TravelWidget
+                readOnly
+                disablePopOut
+                className="h-full"
+                transparent={transparent}
+                backgroundImageUrl={backgroundImageUrl}
+                weatherTempF={weatherTempF}
+                weatherSummary={weatherSummary}
+                humidityPct={humidityPct}
+                windMph={windMph}
+                trip={trip}
+              />
+            </div>
+          </div>
+        )}
     </div>
   );
 }
