@@ -1,21 +1,22 @@
 import { db } from "@/db/client";
-import { trips } from "@/db/schema";
+import { potentialTrips } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 type PageProps = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
 export default async function TripPage({ params }: PageProps) {
-  const idNum = Number(params.id);
+  const { id } = await params;
+  const idNum = Number(id);
   if (!Number.isFinite(idNum)) notFound();
 
   const [trip] = await db
-    .select({ id: trips.id, name: trips.name, destination: trips.destination, budget: trips.budget, source: trips.source, createdAt: trips.createdAt })
-    .from(trips)
-    .where(eq(trips.id, idNum))
+    .select({ id: potentialTrips.id, name: potentialTrips.name, destination: potentialTrips.destination, budget: potentialTrips.budget, source: potentialTrips.source, createdAt: potentialTrips.createdAt })
+    .from(potentialTrips)
+    .where(eq(potentialTrips.id, idNum))
     .limit(1);
 
   if (!trip) notFound();
