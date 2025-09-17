@@ -14,6 +14,22 @@ pnpm dev
 bun dev
 ```
 
+## Mock Trip
+
+```bash
+curl -X POST http://localhost:3000/api/emails \
+  -H 'content-type: application/json' \
+  -d '{
+    "subject": "OpenAI DevDay in SF",
+    "body": "Congratulations! You are invited to participate in the OpenAI DevDay on October 6th, 2025 at 9AM in San Francisco.",
+    "senderEmail": "events@openai.com",
+    "recipientEmail": "you@travel-agent.app",
+    "folder": "inbox",
+    "isRead": false,
+    "sentAt": "2025-09-17T14:30:00Z"
+  }'
+```  
+
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
