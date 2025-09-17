@@ -4,13 +4,13 @@ import ProposedTrips from "../components/ProposedTrips";
 import ProposedTripsModal from "../components/ProposedTripsModal";
 import { db } from "@/db/client";
 import { bookings, potentialTrips } from "@/db/schema";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, like } from "drizzle-orm";
 
 export default async function Home() {
   const proposedTrips = await db
     .select({ id: potentialTrips.id, name: potentialTrips.name, destination: potentialTrips.destination, budget: potentialTrips.budget })
     .from(potentialTrips)
-    .where(and(eq(potentialTrips.isBooked, false), eq(potentialTrips.source, "email")))
+    .where(and(eq(potentialTrips.isBooked, false), like(potentialTrips.source, "email:%")))
     .orderBy(desc(potentialTrips.createdAt))
     .limit(3);
 
@@ -48,15 +48,18 @@ export default async function Home() {
       <section className="relative min-h-[50vh] mb-6 sm:mb-8" id="destinations">
         <div className="absolute inset-0 z-10 pointer-events-none bg-[linear-gradient(180deg,rgba(255,255,255,0)_0%,rgba(255,255,255,0.06)_12%,rgba(255,255,255,0.02)_70%,rgba(255,255,255,0)_100%)]" />
         <div className="w-full mx-auto max-w-6xl px-4 sm:px-6 pt-6 sm:pt-8 flex flex-col justify-end h-full relative z-20">
-          <h1 className="px-1 mb-3 text-xs tracking-[0.18em] font-semibold bg-gradient-to-r from-sky-400 via-indigo-400 to-fuchsia-400 bg-clip-text text-transparent">
-            FIND YOUR TRIP
-          </h1>
-          <SearchBar />
+          
+          <div className="mt-12 sm:mt-16 md:mt-60">
+            <h1 className="px-1 mb-3 text-xs tracking-[0.18em] font-bold text-white">
+              FIND YOUR TRIP
+            </h1>
+            <SearchBar />
+          </div>
         </div>
       </section>
-      <main className="w-full mx-auto max-w-6xl px-4 sm:px-6">
+      <main className="w-full mx-auto max-w-6xl px-4 sm:px-6 -mt-30">
         <section className="mb-6 sm:mb-8" id="deals">
-          <h2 className="px-1 mb-3 text-xs tracking-[0.18em] font-semibold bg-gradient-to-r from-sky-400 via-indigo-400 to-fuchsia-400 bg-clip-text text-transparent">
+          <h2 className="px-1 mb-3 text-xs tracking-[0.18em] font-bold text-white">
             TRIPS FOR YOU AND YOUR FAMILY
           </h2>
           <div className="w-full max-w-[420px]">

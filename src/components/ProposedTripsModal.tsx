@@ -56,7 +56,7 @@ type Props = {
 };
 
 export default function ProposedTripsModal({ trips }: Props) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -68,6 +68,25 @@ export default function ProposedTripsModal({ trips }: Props) {
   const streamAbortRef = useRef<AbortController | null>(null);
   const [phase, setPhase] = useState<"intro" | "trips">("intro");
   const [introReady, setIntroReady] = useState<boolean>(false);
+  const [shouldAutoStart, setShouldAutoStart] = useState<boolean>(false);
+  const [emailTrips, setEmailTrips] = useState<Trip[]>(Array.isArray(trips) ? trips : []);
+  const [tripsLoading, setTripsLoading] = useState<boolean>(false);
+
+  useEffect(() => {
+    setEmailTrips(Array.isArray(trips) ? trips : []);
+  }, [trips]);
+
+  async function refreshTrips(limit: number = 6) {
+    try {
+      setTripsLoading(true);
+      const r = await fetch(`/api/emails/trips?limit=${limit}`, { cache: "no-store" });
+      if (!r.ok) return;
+      const data = await r.json();
+      if (Array.isArray(data)) setEmailTrips(data as Trip[]);
+    } finally {
+      setTripsLoading(false);
+    }
+  }
 
   async function fetchAndStreamComponents(payload: any) {
     try {
@@ -130,10 +149,25 @@ export default function ProposedTripsModal({ trips }: Props) {
   }
 
   useEffect(() => {
-    const onOpen = () => setOpen(true);
+    const onOpen = (e: Event) => {
+      try {
+        const ce = e as unknown as CustomEvent<{ autoStart?: boolean }>;
+        if (ce?.detail?.autoStart) setShouldAutoStart(true);
+      } catch {}
+      setOpen(true);
+      if (emailTrips.length === 0) {
+        refreshTrips();
+      }
+    };
     window.addEventListener("open-proposed-trips", onOpen as EventListener);
+    // Expose an imperative fallback for environments where CustomEvent might not fire
+    (window as any).openProposedTripsModal = (opts?: { autoStart?: boolean }) => {
+      if (opts?.autoStart) setShouldAutoStart(true);
+      setOpen(true);
+      if (emailTrips.length === 0) refreshTrips();
+    };
     return () => window.removeEventListener("open-proposed-trips", onOpen as EventListener);
-  }, []);
+  }, [emailTrips.length]);
 
   useEffect(() => {
     if (!open) return;
@@ -153,13 +187,17 @@ export default function ProposedTripsModal({ trips }: Props) {
 
   useEffect(() => {
     if (!open) return;
-    // Reset to intro each time it's opened
-    setPhase("intro");
+    // When opening, optionally skip intro and go straight to trips
+    if (shouldAutoStart) {
+      setPhase("trips");
+      setShouldAutoStart(false);
+    } else {
+      setPhase("intro");
+    }
     setIntroReady(false);
-  }, [open]);
+  }, [open, shouldAutoStart]);
 
-  const availableTrips = Array.isArray(trips) ? trips.filter((t) => !t.isBooked) : [];
-  if (!availableTrips || availableTrips.length === 0) return null;
+  const availableTrips = Array.isArray(emailTrips) ? emailTrips.filter((t) => !t.isBooked) : [];
   if (!open) return null;
 
   return (

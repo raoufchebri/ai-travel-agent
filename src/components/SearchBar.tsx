@@ -39,6 +39,7 @@ export default function SearchBar() {
   const [messages, setMessages] = useState<Array<{ role: "user" | "assistant" | "system"; content: string }>>([]);
   const [tripId, setTripId] = useState<number | null>(null);
   const [emailCount, setEmailCount] = useState<number>(0);
+  const autoOpenedEmailTripsRef = useRef<boolean>(false);
 
   type RecentTrip = {
     id: number;
@@ -70,7 +71,20 @@ export default function SearchBar() {
         if (!r.ok) return;
         const data = await r.json();
         const count = Number(data?.count ?? 0);
-        if (!cancelled && Number.isFinite(count) && count > 0) setEmailCount(count);
+        if (!cancelled && Number.isFinite(count)) {
+          setEmailCount(count > 0 ? count : 0);
+          // Auto-open ProposedTrips modal on page load if email trips exist (only once)
+          if (count > 0 && !autoOpenedEmailTripsRef.current) {
+            autoOpenedEmailTripsRef.current = true;
+            try {
+              const evt = new CustomEvent("open-proposed-trips", { detail: { autoStart: true }, bubbles: true, composed: true });
+              window.dispatchEvent(evt);
+            } catch {
+              try { window.dispatchEvent(new Event("open-proposed-trips")); } catch {}
+              try { (window as any).openProposedTripsModal?.({ autoStart: true }); } catch {}
+            }
+          }
+        }
       } catch {}
     })();
     return () => {
@@ -80,8 +94,16 @@ export default function SearchBar() {
 
   function openProposedTrips() {
     try {
-      window.dispatchEvent(new Event("open-proposed-trips"));
-    } catch {}
+      // Signal the ProposedTripsModal to open and jump straight to trips list
+      const evt = new CustomEvent("open-proposed-trips", { detail: { autoStart: true }, bubbles: true, composed: true });
+      window.dispatchEvent(evt);
+      // Direct-call fallback if any
+      try { (window as any).openProposedTripsModal?.({ autoStart: true }); } catch {}
+    } catch {
+      // Fallback in older browsers
+      try { window.dispatchEvent(new Event("open-proposed-trips")); } catch {}
+      try { (window as any).openProposedTripsModal?.({ autoStart: true }); } catch {}
+    }
   }
 
   function toYMD(v: Date | string | null | undefined): string {
@@ -309,7 +331,7 @@ export default function SearchBar() {
         <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
           {recent.length > 0 && (
             <div>
-              <div className="px-1 mb-2 text-xs tracking-[0.18em] font-semibold bg-gradient-to-r from-sky-400 via-indigo-400 to-fuchsia-400 bg-clip-text text-transparent">
+              <div className="px-1 mb-2 text-xs tracking-[0.18em] font-bold text-white">
                 recent searches
               </div>
               <div className="flex flex-wrap gap-2.5">
@@ -333,7 +355,7 @@ export default function SearchBar() {
           )}
           {emailCount > 0 && (
             <div>
-              <div className="px-1 mb-2 text-xs tracking-[0.18em] font-semibold bg-gradient-to-r from-sky-400 via-indigo-400 to-fuchsia-400 bg-clip-text text-transparent">
+              <div className="px-1 mb-2 text-xs tracking-[0.18em] font-bold text-white">
                 detected emails
               </div>
               <div className="flex flex-wrap gap-2.5">
