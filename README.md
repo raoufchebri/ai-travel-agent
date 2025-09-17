@@ -2,6 +2,10 @@
 
 This is a demo of a smart travel agent app that sproactively picks up tasks from your emails (and could from calendar, etc.), so it can suggest flights or family holidays based on your life.
 
+
+https://github.com/user-attachments/assets/c0693b35-5999-40f1-b0c8-447bf71d432d
+
+
 Since the app picks incomplete information from different sources, it uses the Chat Completions API with streaming to generate UI components on the fly for any missing trip details.
 
 ### 1) Install
@@ -72,6 +76,8 @@ Repeat with destinations like Paris (CDG), Los Angeles (LAX), and London (LHR). 
 
 ### 7) Suggested trip
 As mentioned before, the app integrates with your email, calendar, kids schools and other data providers to better suggest work and familiy trips for you.
+
+https://github.com/user-attachments/assets/fc1cb270-f131-46b9-a211-9b577deb5266
 
 To test the email integration, let's post a mock email:
 
