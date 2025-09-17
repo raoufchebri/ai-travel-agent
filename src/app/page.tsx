@@ -37,15 +37,25 @@ export default async function Home() {
   }
   return (
     <div className="font-sans min-h-screen relative overflow-hidden">
-      <div className="pointer-events-none fixed inset-0 -z-10 bg-[#DBE1ED]" />
-      <div className="w-full mx-auto max-w-6xl px-4 sm:px-6 mt-4 sm:mt-6 mb-6 sm:mb-8">
-        <h1 className="px-1 mb-3 text-xs tracking-[0.18em] font-semibold bg-gradient-to-r from-sky-400 via-indigo-400 to-fuchsia-400 bg-clip-text text-transparent">
-          FIND YOUR TRIP
-        </h1>
-        <SearchBar />
+      <div className="pointer-events-none fixed inset-0 -z-10">
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,#DBE1ED_0%,#E9EFF9_100%)]" />
+        <div className="absolute top-0 left-0 right-0 h-[60vh] bg-center bg-no-repeat bg-[length:100%]" style={{ backgroundImage: "url('https://plus.unsplash.com/premium_photo-1661962432490-6188a6420a81?q=80&w=1740&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')" }} />
+        <div className="absolute top-0 left-0 right-0 h-[60vh] bg-[linear-gradient(180deg,rgba(255,255,255,0)_70%,#E9EFF9_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(1000px_600px_at_20%_15%,rgba(255,255,255,0.65),transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(900px_520px_at_85%_85%,rgba(99,102,241,0.12),transparent_60%)]" />
+        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "radial-gradient(rgba(0,0,0,0.04) 1px, transparent 1px)", backgroundSize: "3px 3px" }} />
       </div>
+      <section className="relative min-h-[50vh] mb-6 sm:mb-8" id="destinations">
+        <div className="absolute inset-0 z-10 pointer-events-none bg-[linear-gradient(180deg,rgba(255,255,255,0)_0%,rgba(255,255,255,0.06)_12%,rgba(255,255,255,0.02)_70%,rgba(255,255,255,0)_100%)]" />
+        <div className="w-full mx-auto max-w-6xl px-4 sm:px-6 pt-6 sm:pt-8 flex flex-col justify-end h-full relative z-20">
+          <h1 className="px-1 mb-3 text-xs tracking-[0.18em] font-semibold bg-gradient-to-r from-sky-400 via-indigo-400 to-fuchsia-400 bg-clip-text text-transparent">
+            FIND YOUR TRIP
+          </h1>
+          <SearchBar />
+        </div>
+      </section>
       <main className="w-full mx-auto max-w-6xl px-4 sm:px-6">
-        <section className="mb-6 sm:mb-8">
+        <section className="mb-6 sm:mb-8" id="deals">
           <h2 className="px-1 mb-3 text-xs tracking-[0.18em] font-semibold bg-gradient-to-r from-sky-400 via-indigo-400 to-fuchsia-400 bg-clip-text text-transparent">
             TRIPS FOR YOU AND YOUR FAMILY
           </h2>
@@ -54,7 +64,7 @@ export default async function Home() {
               className="h-full"
               readOnly
               transparent
-              backgroundImageUrl="https://images.unsplash.com/photo-1553210262-46d1cd74fa5c?auto=format&fit=crop&w=1800&q=80"
+              backgroundImageUrl="https://images.unsplash.com/photo-1590144662036-33bf0ebd2c7f?q=80&w=1548&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
               weatherTempF={78}
               weatherSummary="Sunny"
               humidityPct={45}
@@ -75,13 +85,13 @@ export default async function Home() {
           </h2>
           <ProposedTrips trips={proposedTrips} />
         </section> */}
-        <section className="mb-6 sm:mb-8">
+        <section className="mb-6 sm:mb-8" id="about">
           <h2 className="px-1 mb-3 text-xs tracking-[0.18em] font-semibold bg-gradient-to-r from-sky-400 via-indigo-400 to-fuchsia-400 bg-clip-text text-transparent">
             YOUR TRIPS
           </h2>
           <div className="columns-1 sm:columns-2 lg:columns-3 gap-4">
             {allBookings.map((b) => (
-              <div key={b.id} className="mb-4 break-inside-avoid" style={{ breakInside: "avoid" }}>
+              <div key={b.id} className="mb-4 break-inside-avoid transition-transform duration-200 ease-out hover:-translate-y-0.5" style={{ breakInside: "avoid" }}>
                 <div className="w-full max-w-[420px]">
                   <TravelWidget
                     className="h-full"
