@@ -65,7 +65,8 @@ export default function SearchBar() {
   // Fetch detected emails meta (count)
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    let interval: any;
+    const check = async () => {
       try {
         const r = await fetch("/api/emails?summary=false", { cache: "no-store" });
         if (!r.ok) return;
@@ -73,7 +74,7 @@ export default function SearchBar() {
         const count = Number(data?.count ?? 0);
         if (!cancelled && Number.isFinite(count)) {
           setEmailCount(count > 0 ? count : 0);
-          // Auto-open ProposedTrips modal on page load if email trips exist (only once)
+          // Auto-open ProposedTrips modal once when emails are first detected
           if (count > 0 && !autoOpenedEmailTripsRef.current) {
             autoOpenedEmailTripsRef.current = true;
             try {
@@ -86,9 +87,13 @@ export default function SearchBar() {
           }
         }
       } catch {}
-    })();
+    };
+    // Run immediately, then poll every 10 seconds
+    check();
+    interval = setInterval(check, 10000);
     return () => {
       cancelled = true;
+      if (interval) clearInterval(interval);
     };
   }, []);
 

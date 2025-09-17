@@ -1,17 +1,5 @@
 import { pgTable, text, timestamp, boolean, serial, integer } from "drizzle-orm/pg-core";
 
-export const users = pgTable("users", {
-	id: serial("id").primaryKey(),
-	name: text("name").notNull(),
-	email: text("email").notNull().unique(),
-	createdAt: timestamp("created_at", { withTimezone: false })
-		.defaultNow()
-		.notNull(),
-});
-
-export type SelectUser = typeof users.$inferSelect;
-export type InsertUser = typeof users.$inferInsert;
-
 
 export const emails = pgTable("emails", {
 	id: serial("id").primaryKey(),
@@ -26,23 +14,8 @@ export const emails = pgTable("emails", {
 		.notNull(),
 });
 
-export const trips = pgTable("trips", {
-	id: serial("id").primaryKey(),
-	name: text("name").notNull(),
-	destination: text("destination").notNull(),
-	origin: text("origin"),
-	budget: integer("budget"),
-    source: text("source").notNull(),
-	startDate: timestamp("start_date", { withTimezone: false }),
-	endDate: timestamp("end_date", { withTimezone: false }),
-	createdAt: timestamp("created_at", { withTimezone: false })
-		.defaultNow()
-		.notNull(),
-});
-
 export type SelectEmail = typeof emails.$inferSelect;
 export type InsertEmail = typeof emails.$inferInsert;
-
 
 
 // Potential trips table (mirrors migrations creating potential_trips)
@@ -84,18 +57,3 @@ export const bookings = pgTable("bookings", {
 
 export type SelectBooking = typeof bookings.$inferSelect;
 export type InsertBooking = typeof bookings.$inferInsert;
-
-export const userProfiles = pgTable("user_profiles", {
-	id: serial("id").primaryKey(),
-	name: text("name").notNull(),
-	location: text("location"),
-	adultCompanions: integer("adult_companions").notNull().default(0),
-	kidsCompanionAges: integer("kids_companion_ages").array(),
-	budgetPerPerson: integer("budget_per_person"),
-	createdAt: timestamp("created_at", { withTimezone: false })
-		.defaultNow()
-		.notNull(),
-});
-
-export type SelectUserProfile = typeof userProfiles.$inferSelect;
-export type InsertUserProfile = typeof userProfiles.$inferInsert;
