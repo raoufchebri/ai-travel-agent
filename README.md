@@ -7,6 +7,7 @@ https://github.com/user-attachments/assets/c0693b35-5999-40f1-b0c8-447bf71d432d
 
 
 Since the app picks incomplete information from different sources, it uses the Chat Completions API with streaming to generate UI components on the fly for any missing trip details.
+You can also try the app on https://travel-agent-gilt-theta.vercel.app/
 
 ### 1) Install
 
