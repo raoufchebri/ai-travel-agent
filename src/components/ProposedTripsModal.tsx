@@ -21,13 +21,28 @@ type ButtonSpec = {
 
 type PromptSpec = {
   type: "prompt";
-  field: "origin" | "startDate" | "endDate" | "budget" | "destination";
+  field: "name" | "origin" | "startDate" | "endDate" | "budget" | "destination";
   label: string;
   inputType: "text" | "date" | "number";
   suggestions?: string[];
 };
 
-type ComponentSpec = ButtonSpec | PromptSpec;
+type FlightSpec = {
+  type: "flight";
+  id: string;
+  carrier: string;
+  carrierLogo: string;
+  flightNumber: string;
+  origin: string;
+  destination: string;
+  departAt: string; // ISO string
+  arriveAt: string; // ISO string
+  durationMinutes: number;
+  price: number;
+  currency: string;
+};
+
+type ComponentSpec = ButtonSpec | PromptSpec | FlightSpec;
 
 type Props = {
   trips: Trip[];
@@ -203,6 +218,49 @@ export default function ProposedTripsModal({ trips }: Props) {
                     </div>
                   ))}
                 </div>
+                {components.filter((c) => c.type === "flight").length > 0 && (
+                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {(components.filter((c) => c.type === "flight") as FlightSpec[]).map((f, i) => (
+                      <div
+                        key={f.id}
+                        className="rounded-lg border border-white/20 bg-white/5 p-4 opacity-0 animate-[itemIn_320ms_ease-out_forwards]"
+                        style={{ animationDelay: `${i * 80}ms` }}
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <img src={f.carrierLogo} alt={f.carrier} className="h-6 w-6 object-contain" />
+                            <div className="font-medium text-white">{f.carrier}</div>
+                          </div>
+                          <div className="text-white/70 text-sm">{f.flightNumber}</div>
+                        </div>
+                        <div className="mb-3">
+                          <div className="text-white text-lg">
+                            {f.origin} → {f.destination}
+                          </div>
+                          <div className="text-white/80 text-sm">
+                            {new Date(f.departAt).toLocaleString()} - {new Date(f.arriveAt).toLocaleString()}
+                          </div>
+                          <div className="text-white/70 text-xs">Duration: {Math.round(f.durationMinutes / 60)}h {f.durationMinutes % 60}m</div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="text-white text-lg font-semibold">
+                            {f.currency} {f.price}
+                          </div>
+                          <button
+                            type="button"
+                            className="px-3 py-1.5 rounded-md bg-white/20 hover:bg-white/30 border border-white/30 text-white text-sm"
+                            onClick={() => {
+                              setResponse(`Selected ${f.carrier} ${f.flightNumber}`);
+                            }}
+                            aria-label={`Select flight ${f.flightNumber}`}
+                          >
+                            Select
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {components.filter((c) => c.type === "prompt").length > 0 && (
                   <div className="mt-3 space-y-3">
                     {(() => {

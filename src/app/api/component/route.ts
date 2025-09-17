@@ -19,7 +19,7 @@ export async function POST(request: Request) {
       name?: string;
       destination?: string;
       budget?: number | null;
-      origin?: string;
+      origin?: string | null;
       startDate?: string;
       endDate?: string;
       messages?: Array<{ role: "user" | "assistant" | "system"; content: string }>;
@@ -42,6 +42,7 @@ export async function POST(request: Request) {
         destination: destText || "",
         source: "search",
       };
+      if (typeof origin === "string" && origin.trim().length > 0) insertValues.origin = origin.trim();
       if (typeof budget === "number" && Number.isFinite(budget)) insertValues.budget = Math.trunc(budget);
       if (typeof startDate === "string" && startDate.trim().length > 0) insertValues.startDate = new Date(startDate);
       if (typeof endDate === "string" && endDate.trim().length > 0) insertValues.endDate = new Date(endDate);
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
 
     // Load current trip state
     const existingRows = await db
-      .select({ id: trips.id, name: trips.name, destination: trips.destination, budget: trips.budget, startDate: trips.startDate, endDate: trips.endDate })
+      .select({ id: trips.id, name: trips.name, destination: trips.destination, origin: trips.origin, budget: trips.budget, startDate: trips.startDate, endDate: trips.endDate })
       .from(trips)
       .where(eq(trips.id, tripId as number))
       .limit(1);
@@ -71,10 +72,43 @@ export async function POST(request: Request) {
       });
     }
 
+    // Deterministic update: persist origin if provided directly or via last user message (e.g., "origin: Paris")
+    try {
+      let originFromMessages: string | undefined;
+      if (Array.isArray(messages)) {
+        for (let i = messages.length - 1; i >= 0; i--) {
+          const m = messages[i];
+          if (m && m.role === "user" && typeof m.content === "string") {
+            const lines = m.content.split(/\n+/);
+            for (let j = lines.length - 1; j >= 0; j--) {
+              const line = lines[j];
+              const match = line.match(/^\s*origin\s*:\s*(.+)\s*$/i);
+              if (match && match[1]) {
+                originFromMessages = match[1].trim();
+                break;
+              }
+            }
+            if (originFromMessages) break;
+          }
+        }
+      }
+
+      const originCandidate = typeof origin === "string" && origin.trim().length > 0
+        ? origin.trim()
+        : (originFromMessages && originFromMessages.length > 0 ? originFromMessages : undefined);
+
+      if (originCandidate && originCandidate !== (current as any).origin) {
+        await db.update(trips).set({ origin: originCandidate }).where(eq(trips.id, tripId as number));
+      }
+    } catch (_) {
+      // ignore and continue; model tool can still reconcile
+    }
+
     // Define a tool to update trip fields
     const updateTripParams = z.object({
       name: z.string().min(1).optional(),
       destination: z.string().min(1).optional(),
+      origin: z.string().min(1).optional(),
       budget: z.number().int().optional(),
       startDate: z.string().optional().describe("YYYY-MM-DD"),
       endDate: z.string().optional().describe("YYYY-MM-DD"),
@@ -89,6 +123,7 @@ export async function POST(request: Request) {
         if (typeof args.name === "string" && args.name.trim().length > 0) changes.name = args.name.trim();
         if (typeof args.destination === "string" && args.destination.trim().length > 0) changes.destination = args.destination.trim();
         if (typeof args.budget === "number" && Number.isFinite(args.budget)) changes.budget = Math.trunc(args.budget);
+        if (typeof args.origin === "string" && args.origin.trim().length > 0) changes.origin = args.origin.trim();
         if (typeof args.startDate === "string" && args.startDate.trim().length > 0) changes.startDate = new Date(args.startDate);
         if (typeof args.endDate === "string" && args.endDate.trim().length > 0) changes.endDate = new Date(args.endDate);
 
@@ -105,6 +140,7 @@ export async function POST(request: Request) {
     const providedHints = [
       name && name !== current.name ? `name: ${name}` : null,
       destination && destination !== current.destination ? `destination: ${destination}` : null,
+      origin && origin !== (current as any).origin ? `origin: ${origin}` : null,
       typeof budget === "number" && budget !== (current.budget ?? null) ? `budget: ${budget}` : null,
       typeof startDate === "string" ? `startDate: ${startDate}` : null,
       typeof endDate === "string" ? `endDate: ${endDate}` : null,
@@ -120,9 +156,9 @@ export async function POST(request: Request) {
           {
             role: "system",
             content:
-              "You reconcile trip fields from user-provided data and prior conversation. If you find any concrete values for name, destination, budget, startDate, endDate that improve the database record, call the updateTrip tool once with those fields. Use ISO YYYY-MM-DD for dates. If nothing new, do not call the tool.",
+              "You reconcile trip fields from user-provided data and prior conversation. If you find any concrete values for name, destination, origin, budget, startDate, endDate that improve the database record, call the updateTrip tool once with those fields. Use ISO YYYY-MM-DD for dates. If nothing new, do not call the tool.",
           },
-          { role: "user", content: `Current trip:\nname: ${current.name}\ndestination: ${current.destination}\nbudget: ${current.budget ?? ""}\nstartDate: ${current.startDate ?? ""}\nendDate: ${current.endDate ?? ""}` },
+          { role: "user", content: `Current trip:\nname: ${current.name}\ndestination: ${current.destination}\norigin: ${(current as any).origin ?? ""}\nbudget: ${current.budget ?? ""}\nstartDate: ${current.startDate ?? ""}\nendDate: ${current.endDate ?? ""}` },
           providedHints ? { role: "user", content: `New data provided:\n${providedHints}` } : undefined,
           ...(Array.isArray(messages) ? messages.filter((m) => m && typeof m.role === "string" && typeof m.content === "string") : []),
         ].filter(Boolean) as any,
@@ -138,7 +174,7 @@ export async function POST(request: Request) {
 
     // Reload current state after potential update
     const afterRows = await db
-      .select({ id: trips.id, name: trips.name, destination: trips.destination, budget: trips.budget, startDate: trips.startDate, endDate: trips.endDate })
+      .select({ id: trips.id, name: trips.name, destination: trips.destination, origin: trips.origin, budget: trips.budget, startDate: trips.startDate, endDate: trips.endDate })
       .from(trips)
       .where(eq(trips.id, tripId as number))
       .limit(1);
@@ -148,16 +184,74 @@ export async function POST(request: Request) {
     const hasAllCore =
       typeof after.name === "string" && after.name.trim().length > 0 &&
       typeof after.destination === "string" && after.destination.trim().length > 0 &&
+      typeof (after as any).origin === "string" && (after as any).origin.trim().length > 0 &&
       typeof after.budget === "number" && after.budget !== null &&
       after.startDate instanceof Date && !Number.isNaN(after.startDate.getTime()) &&
       after.endDate instanceof Date && !Number.isNaN(after.endDate.getTime());
 
     if (hasAllCore) {
+      // Build three mock flight options based on trip info
+      const dep = after.startDate instanceof Date ? after.startDate : new Date();
+      const arr = after.endDate instanceof Date ? after.endDate : new Date(dep.getTime() + 3 * 24 * 60 * 60 * 1000);
+
+      function toIsoLocal(date: Date, hour: number, minute: number): string {
+        const d = new Date(date.getTime());
+        d.setHours(hour, minute, 0, 0);
+        return d.toISOString();
+      }
+
+      const destinationText = after.destination || "";
+      const lowerDest = destinationText.toLowerCase();
+      const byRegion = lowerDest.includes("france") || lowerDest.includes("paris")
+        ? [
+            { carrier: "Air France", logo: "/globe.svg" },
+            { carrier: "Transavia France", logo: "/globe.svg" },
+            { carrier: "Corsair", logo: "/globe.svg" },
+          ]
+        : lowerDest.includes("japan") || lowerDest.includes("tokyo")
+        ? [
+            { carrier: "ANA", logo: "/globe.svg" },
+            { carrier: "JAL", logo: "/globe.svg" },
+            { carrier: "Peach", logo: "/globe.svg" },
+          ]
+        : lowerDest.includes("uk") || lowerDest.includes("london") || lowerDest.includes("britain")
+        ? [
+            { carrier: "British Airways", logo: "/globe.svg" },
+            { carrier: "easyJet", logo: "/globe.svg" },
+            { carrier: "Jet2.com", logo: "/globe.svg" },
+          ]
+        : [
+            { carrier: "Regional Air", logo: "/globe.svg" },
+            { carrier: "City Express", logo: "/globe.svg" },
+            { carrier: "SkyLink", logo: "/globe.svg" },
+          ];
+
+      const flights = [0, 1, 2].map((i) => {
+        const departAt = toIsoLocal(dep, 9 + i * 2, 0);
+        const arriveAt = toIsoLocal(dep, 12 + i * 2, 45);
+        const price = 450 + i * 70;
+        const fnum = `${byRegion[i].carrier.replace(/[^A-Z]/gi, "").slice(0, 2).toUpperCase()}${(200 + i * 7).toString()}`;
+        return {
+          type: "flight",
+          id: `${tripId}-${i + 1}`,
+          carrier: byRegion[i].carrier,
+          carrierLogo: byRegion[i].logo,
+          flightNumber: fnum,
+          origin: (after as any).origin || "",
+          destination: after.destination,
+          departAt,
+          arriveAt,
+          durationMinutes: 225 + i * 20,
+          price,
+          currency: "USD",
+        };
+      });
+
       if (!enableStream) {
-        return new Response(JSON.stringify({ message: "Done.", tripId }), {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ tripId, components: flights }),
+          { status: 200, headers: { "content-type": "application/json" } }
+        );
       }
 
       const stream = new ReadableStream({
@@ -165,8 +259,10 @@ export async function POST(request: Request) {
           const encoder = new TextEncoder();
           const context = `data: ${JSON.stringify({ type: "context", tripId })}\n\n`;
           controller.enqueue(encoder.encode(context));
-          const chunk = `data: ${JSON.stringify({ type: "message", content: "Done." })}\n\n`;
-          controller.enqueue(encoder.encode(chunk));
+          for (const f of flights) {
+            const line = `data: ${JSON.stringify(f)}\n\n`;
+            controller.enqueue(encoder.encode(line));
+          }
           controller.close();
         },
       });
@@ -186,7 +282,7 @@ export async function POST(request: Request) {
       prompts: z
         .array(
           z.object({
-            field: z.enum(["name", "destination", "startDate", "endDate", "budget"]),
+            field: z.enum(["name", "destination", "origin", "startDate", "endDate", "budget"]),
             question: z.string().min(3),
             inputType: z.enum(["text", "date", "number"]).optional(),
             suggestions: z.array(z.string()).max(5).optional(),
@@ -207,11 +303,12 @@ export async function POST(request: Request) {
       model: openai("gpt-4o-mini"),
       schema: PromptsDecisionSchema,
       system:
-        "You are a UX planner for a travel app. Identify which of these fields are still missing or empty in the database: name, destination, startDate, endDate, budget. Return up to 3 prompts only for the missing ones. Do not duplicate fields or include fields that already exist. For each selected field, write a short, friendly question to collect JUST that field. Provide at most 3–5 concise suggestions. IMPORTANT for dates: suggest only future dates in YYYY-MM-DD, using today or any provided startDate/endDate as reference. Ensure endDate is after startDate.",
+        "You are a UX planner for a travel app. Identify which of these fields are still missing or empty in the database: name, destination, origin, startDate, endDate, budget. Return up to 3 prompts only for the missing ones. Do not duplicate fields or include fields that already exist. For each selected field, write a short, friendly question to collect JUST that field. Provide at most 3–5 concise suggestions. IMPORTANT for dates: suggest only future dates in YYYY-MM-DD, using today or any provided startDate/endDate as reference. Ensure endDate is after startDate.",
       prompt: [
-        `DB has -> name: ${after.name} | destination: ${after.destination} | budget: ${after.budget ?? ""} | startDate: ${after.startDate ?? ""} | endDate: ${after.endDate ?? ""}`,
+        `DB has -> name: ${after.name} | destination: ${after.destination} | origin: ${(after as any).origin ?? ""} | budget: ${after.budget ?? ""} | startDate: ${after.startDate ?? ""} | endDate: ${after.endDate ?? ""}`,
         name ? `Provided name: ${name}` : null,
         destination ? `Provided destination: ${destination}` : null,
+        origin ? `Provided origin: ${origin}` : null,
         typeof budget === "number" ? `Provided budget: $${budget}` : null,
         startDate ? `Provided startDate: ${startDate}` : null,
         endDate ? `Provided endDate: ${endDate}` : null,
@@ -299,6 +396,7 @@ export async function POST(request: Request) {
     const labelFallbackMap: Record<string, string> = {
       name: "What should we call this trip?",
       destination: "Where are you headed?",
+      origin: "Where are you departing from?",
       startDate: "When do you want to depart?",
       endDate: "When do you want to return? (optional)",
       budget: "What's your budget? (USD)",
@@ -308,6 +406,7 @@ export async function POST(request: Request) {
       switch (p.field) {
         case "name": return !after.name || after.name.trim().length === 0;
         case "destination": return !after.destination || after.destination.trim().length === 0;
+        case "origin": return !(after as any).origin || (after as any).origin.trim().length === 0;
         case "budget": return typeof after.budget !== "number" || after.budget === null;
         case "startDate": return !(after.startDate instanceof Date) || Number.isNaN(after.startDate.getTime());
         case "endDate": return !(after.endDate instanceof Date) || Number.isNaN(after.endDate.getTime());
