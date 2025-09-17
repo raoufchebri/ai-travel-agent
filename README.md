@@ -30,12 +30,12 @@ Open `http://localhost:3000`.
 
 ### 4) Create a database on Neon
 
-Use the Neon console to create a project and get a connection string, or use the CLI. Paste the Postgres connection string into `DATABASE_URL` in `.env.local`.
+Use the [Neon Console](https://neon.com) to create a project and get a connection string, or use the CLI. Paste the Postgres connection string into `DATABASE_URL` in `.env.local`.
 
 Run migrations:
 
 ```bash
-npm run db:migrate
+npx drizzle-kit generate && npx drizzle-kit migrate
 ```
 
 ### 5) Create mock bookings (SF, Paris, LA, London)
@@ -62,7 +62,7 @@ curl -X POST http://localhost:3000/api/bookings \
   }'
 ```
 
-Repeat with destinations like Paris (CDG), Los Angeles (LAX), and London (LHR). Bookings appear under “YOUR TRIPS”.
+Repeat with destinations like Paris (CDG), Los Angeles (LAX), and London (LHR). Refresh the page for your bookings to appear under “YOUR TRIPS”.
 
 ### 6) Flow of a normal booking
 1. On the home page. press Command (⌘) + K to open the planner.
